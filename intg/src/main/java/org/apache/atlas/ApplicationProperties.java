@@ -46,6 +46,7 @@ public final class ApplicationProperties extends PropertiesConfiguration {
 
     public static final String  GRAPHDB_BACKEND_CONF            = "atlas.graphdb.backend";
     public static final String  STORAGE_BACKEND_CONF            = "atlas.graph.storage.backend";
+    public static final String  STORAGE_LOCK_ENABLED            = "atlas.graph.storage.lock.enabled";
     public static final String  INDEX_BACKEND_CONF              = "atlas.graph.index.search.backend";
     public static final String  INDEX_MAP_NAME_CONF             = "atlas.graph.index.search.map-name";
     public static final String  SOLR_WAIT_SEARCHER_CONF         = "atlas.graph.index.search.solr.wait-searcher";

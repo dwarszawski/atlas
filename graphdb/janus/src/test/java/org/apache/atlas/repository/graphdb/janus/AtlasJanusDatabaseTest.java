@@ -74,7 +74,7 @@ public class AtlasJanusDatabaseTest {
                 AtlasPropertyKey propertyKey = mgmt.getPropertyKey(propertyName);
                 if (propertyKey == null) {
                     propertyKey = mgmt.makePropertyKey(propertyName, String.class, AtlasCardinality.SET);
-                    mgmt.createVertexCompositeIndex(propertyName, false, Collections.singletonList(propertyKey));
+                    mgmt.createVertexCompositeIndex(propertyName, false, false, Collections.singletonList(propertyKey));
                 }
             }
             mgmt.commit();
