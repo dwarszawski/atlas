@@ -82,9 +82,10 @@ public interface AtlasGraphManagement {
      *
      * @param propertyName
      * @param isUnique
+     * @param lockEnabled
      * @param propertyKeys
      */
-    void createVertexCompositeIndex(String propertyName, boolean isUnique, List<AtlasPropertyKey> propertyKeys);
+    void createVertexCompositeIndex(String propertyName, boolean isUnique, boolean lockEnabled, List<AtlasPropertyKey> propertyKeys);
 
     /**
      * Creates a composite edge index for the graph.
@@ -93,7 +94,7 @@ public interface AtlasGraphManagement {
      * @param isUnique
      * @param propertyKeys
      */
-    void createEdgeCompositeIndex(String propertyName, boolean isUnique, List<AtlasPropertyKey> propertyKeys);
+    void createEdgeCompositeIndex(String propertyName, boolean isUnique, boolean lockEnabled, List<AtlasPropertyKey> propertyKeys);
 
     /**
      * Looks up the index with the specified name in the graph.  Returns null if

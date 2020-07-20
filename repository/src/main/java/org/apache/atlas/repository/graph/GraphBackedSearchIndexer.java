@@ -56,6 +56,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
+import static org.apache.atlas.ApplicationProperties.STORAGE_LOCK_ENABLED;
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.*;
 import static org.apache.atlas.repository.Constants.*;
 import static org.apache.atlas.repository.graphdb.AtlasCardinality.LIST;
@@ -89,6 +90,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
     // Added for type lookup when indexing the new typedefs
     private final AtlasTypeRegistry typeRegistry;
     private final List<IndexChangeListener> indexChangeListeners = new ArrayList<>();
+    private final Configuration configuration;
 
     //allows injection of a dummy graph for testing
     private IAtlasGraphProvider provider;
@@ -121,6 +123,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
             throws IndexException, RepositoryException {
         this.provider     = provider;
         this.typeRegistry = typeRegistry;
+        this.configuration = configuration;
 
         //make sure solr index follows graph backed index listener
         addIndexListener(new SolrIndexHelper(typeRegistry));
@@ -171,18 +174,22 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
         try {
             management = provider.get().getManagementSystem();
+            boolean lockEnabled = false;
+            if (configuration.containsKey(STORAGE_LOCK_ENABLED)) {
+                lockEnabled = configuration.getBoolean(STORAGE_LOCK_ENABLED);
+            }
 
             // Update index for newly created types
             if (CollectionUtils.isNotEmpty(changedTypeDefs.getCreatedTypeDefs())) {
                 for (AtlasBaseTypeDef typeDef : changedTypeDefs.getCreatedTypeDefs()) {
-                    updateIndexForTypeDef(management, typeDef);
+                    updateIndexForTypeDef(management, typeDef, lockEnabled);
                 }
             }
 
             // Update index for updated types
             if (CollectionUtils.isNotEmpty(changedTypeDefs.getUpdatedTypeDefs())) {
                 for (AtlasBaseTypeDef typeDef : changedTypeDefs.getUpdatedTypeDefs()) {
-                    updateIndexForTypeDef(management, typeDef);
+                    updateIndexForTypeDef(management, typeDef, lockEnabled);
                 }
             }
 
@@ -292,6 +299,10 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
     private void initialize(AtlasGraph graph) throws RepositoryException, IndexException {
         AtlasGraphManagement management = graph.getManagementSystem();
 
+        boolean lockEnabled = false;
+        if (configuration.containsKey("atlas.graph.storage.lock.enabled")) {
+            lockEnabled = configuration.getBoolean("atlas.graph.storage.lock.enabled");
+        }
         try {
             LOG.info("Creating indexes for graph.");
 
@@ -314,35 +325,35 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
             }
 
             // create vertex indexes
-            createCommonVertexIndex(management, GUID_PROPERTY_KEY, UniqueKind.GLOBAL_UNIQUE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, HISTORICAL_GUID_PROPERTY_KEY, UniqueKind.GLOBAL_UNIQUE, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, GUID_PROPERTY_KEY, UniqueKind.GLOBAL_UNIQUE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, HISTORICAL_GUID_PROPERTY_KEY, UniqueKind.GLOBAL_UNIQUE,  lockEnabled, String.class, SINGLE, true, false);
 
-            createCommonVertexIndex(management, TYPENAME_PROPERTY_KEY, UniqueKind.GLOBAL_UNIQUE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, TYPESERVICETYPE_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, VERTEX_TYPE_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, VERTEX_ID_IN_IMPORT_KEY, UniqueKind.NONE, Long.class, SINGLE, true, false);
+            createCommonVertexIndex(management, TYPENAME_PROPERTY_KEY, UniqueKind.GLOBAL_UNIQUE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, TYPESERVICETYPE_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, VERTEX_TYPE_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, VERTEX_ID_IN_IMPORT_KEY, UniqueKind.NONE,  lockEnabled, Long.class, SINGLE, true, false);
 
-            createCommonVertexIndex(management, ENTITY_TYPE_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, SUPER_TYPES_PROPERTY_KEY, UniqueKind.NONE, String.class, SET, true, false);
-            createCommonVertexIndex(management, TIMESTAMP_PROPERTY_KEY, UniqueKind.NONE, Long.class, SINGLE, false, false);
-            createCommonVertexIndex(management, MODIFICATION_TIMESTAMP_PROPERTY_KEY, UniqueKind.NONE, Long.class, SINGLE, false, false);
-            createCommonVertexIndex(management, STATE_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, false, false);
-            createCommonVertexIndex(management, CREATED_BY_KEY, UniqueKind.NONE, String.class, SINGLE, false, false, true);
-            createCommonVertexIndex(management, CLASSIFICATION_TEXT_KEY, UniqueKind.NONE, String.class, SINGLE, false, false);
-            createCommonVertexIndex(management, MODIFIED_BY_KEY, UniqueKind.NONE, String.class, SINGLE, false, false, true);
-            createCommonVertexIndex(management, CLASSIFICATION_NAMES_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, PROPAGATED_CLASSIFICATION_NAMES_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, TRAIT_NAMES_PROPERTY_KEY, UniqueKind.NONE, String.class, SET, true, true);
-            createCommonVertexIndex(management, PROPAGATED_TRAIT_NAMES_PROPERTY_KEY, UniqueKind.NONE, String.class, LIST, true, true);
-            createCommonVertexIndex(management, IS_INCOMPLETE_PROPERTY_KEY, UniqueKind.NONE, Integer.class, SINGLE, true, true);
-            createCommonVertexIndex(management, CUSTOM_ATTRIBUTES_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, LABELS_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, ENTITY_TYPE_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, SUPER_TYPES_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SET, true, false);
+            createCommonVertexIndex(management, TIMESTAMP_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, Long.class, SINGLE, false, false);
+            createCommonVertexIndex(management, MODIFICATION_TIMESTAMP_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, Long.class, SINGLE, false, false);
+            createCommonVertexIndex(management, STATE_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, false, false);
+            createCommonVertexIndex(management, CREATED_BY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, false, false, true);
+            createCommonVertexIndex(management, CLASSIFICATION_TEXT_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, false, false);
+            createCommonVertexIndex(management, MODIFIED_BY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, false, false, true);
+            createCommonVertexIndex(management, CLASSIFICATION_NAMES_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, PROPAGATED_CLASSIFICATION_NAMES_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, TRAIT_NAMES_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SET, true, true);
+            createCommonVertexIndex(management, PROPAGATED_TRAIT_NAMES_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, LIST, true, true);
+            createCommonVertexIndex(management, IS_INCOMPLETE_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, Integer.class, SINGLE, true, true);
+            createCommonVertexIndex(management, CUSTOM_ATTRIBUTES_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, LABELS_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
 
-            createCommonVertexIndex(management, PATCH_ID_PROPERTY_KEY, UniqueKind.GLOBAL_UNIQUE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, PATCH_DESCRIPTION_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, PATCH_TYPE_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, PATCH_ACTION_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
-            createCommonVertexIndex(management, PATCH_STATE_PROPERTY_KEY, UniqueKind.NONE, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, PATCH_ID_PROPERTY_KEY, UniqueKind.GLOBAL_UNIQUE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, PATCH_DESCRIPTION_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, PATCH_TYPE_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, PATCH_ACTION_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
+            createCommonVertexIndex(management, PATCH_STATE_PROPERTY_KEY, UniqueKind.NONE,  lockEnabled, String.class, SINGLE, true, false);
 
             // create vertex-centric index
             createVertexCentricIndex(management, CLASSIFICATION_LABEL, AtlasEdgeDirection.BOTH, CLASSIFICATION_EDGE_NAME_PROPERTY_KEY, String.class, SINGLE);
@@ -350,8 +361,8 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
             createVertexCentricIndex(management, CLASSIFICATION_LABEL, AtlasEdgeDirection.BOTH, Arrays.asList(CLASSIFICATION_EDGE_NAME_PROPERTY_KEY, CLASSIFICATION_EDGE_IS_PROPAGATED_PROPERTY_KEY));
 
             // create edge indexes
-            createEdgeIndex(management, RELATIONSHIP_GUID_PROPERTY_KEY, String.class, SINGLE, true);
-            createEdgeIndex(management, EDGE_ID_IN_IMPORT_KEY, String.class, SINGLE, true);
+            createEdgeIndex(management, RELATIONSHIP_GUID_PROPERTY_KEY, String.class, SINGLE, true, lockEnabled);
+            createEdgeIndex(management, EDGE_ID_IN_IMPORT_KEY, String.class, SINGLE, true, lockEnabled);
 
             // create fulltext indexes
             createFullTextIndex(management, ENTITY_TEXT_PROPERTY_KEY, String.class, SINGLE);
@@ -443,16 +454,18 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
     private void createCommonVertexIndex(AtlasGraphManagement management,
                                          String propertyName,
                                          UniqueKind uniqueKind,
+                                         boolean lockEnabled,
                                          Class propertyClass,
                                          AtlasCardinality cardinality,
                                          boolean createCompositeIndex,
                                          boolean createCompositeIndexWithTypeAndSuperTypes) {
-        createCommonVertexIndex(management, propertyName, uniqueKind, propertyClass, cardinality, createCompositeIndex, createCompositeIndexWithTypeAndSuperTypes, false);
+        createCommonVertexIndex(management, propertyName, uniqueKind, lockEnabled, propertyClass, cardinality, createCompositeIndex, createCompositeIndexWithTypeAndSuperTypes, false);
     }
 
     private void createCommonVertexIndex(AtlasGraphManagement management,
                                          String propertyName,
                                          UniqueKind uniqueKind,
+                                         boolean lockEnabled,
                                          Class propertyClass,
                                          AtlasCardinality cardinality,
                                          boolean createCompositeIndex,
@@ -467,6 +480,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         final String indexFieldName = createVertexIndex(management,
                                                         propertyName,
                                                         uniqueKind,
+                                                        lockEnabled,
                                                         propertyClass,
                                                         cardinality,
                                                         createCompositeIndex,
@@ -476,7 +490,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         }
     }
 
-    private void addIndexForType(AtlasGraphManagement management, AtlasBaseTypeDef typeDef) {
+    private void addIndexForType(AtlasGraphManagement management, AtlasBaseTypeDef typeDef, boolean lockEnabled) {
         if (typeDef instanceof AtlasEnumDef) {
             // Only handle complex types like Struct, Classification and Entity
             return;
@@ -486,7 +500,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
             List<AtlasAttributeDef> attributeDefs = structDef.getAttributeDefs();
             if (CollectionUtils.isNotEmpty(attributeDefs)) {
                 for (AtlasAttributeDef attributeDef : attributeDefs) {
-                    createIndexForAttribute(management, structDef, attributeDef);
+                    createIndexForAttribute(management, structDef, attributeDef, lockEnabled);
                 }
             }
         } else if (!AtlasTypeUtil.isBuiltInType(typeDef.getName())){
@@ -515,7 +529,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         LOG.info("Completed deleting indexes for type {}", typeDef.getName());
     }
 
-    private void createIndexForAttribute(AtlasGraphManagement management, AtlasStructDef structDef, AtlasAttributeDef attributeDef) {
+    private void createIndexForAttribute(AtlasGraphManagement management, AtlasStructDef structDef, AtlasAttributeDef attributeDef, boolean lockEnabled) {
         String           qualifiedName  = AtlasAttribute.getQualifiedAttributeName(structDef, attributeDef.getName());
         final String     propertyName   = AtlasAttribute.generateVertexPropertyName(structDef, attributeDef, qualifiedName);
         AtlasCardinality cardinality    = toAtlasCardinality(attributeDef.getCardinality());
@@ -563,7 +577,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
             } else if (isBuiltInType) {
                 if (isRelationshipType(atlasType)) {
-                    createEdgeIndex(management, propertyName, getPrimitiveClass(attribTypeName), cardinality, false);
+                    createEdgeIndex(management, propertyName, getPrimitiveClass(attribTypeName), cardinality, false, lockEnabled);
                 } else {
                     Class primitiveClassType = getPrimitiveClass(attribTypeName);
                     boolean isStringField = false;
@@ -571,25 +585,25 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
                         isStringField = AtlasAttributeDef.IndexType.STRING.equals(indexType);
 
                     }
-                    createVertexIndex(management, propertyName, UniqueKind.NONE, getPrimitiveClass(attribTypeName), cardinality, isIndexable, false, isStringField);
+                    createVertexIndex(management, propertyName, UniqueKind.NONE,  lockEnabled, getPrimitiveClass(attribTypeName), cardinality, isIndexable, false, isStringField);
 
                     if (uniqPropName != null) {
-                        createVertexIndex(management, uniqPropName, UniqueKind.PER_TYPE_UNIQUE, getPrimitiveClass(attribTypeName), cardinality, isIndexable, true, isStringField);
+                        createVertexIndex(management, uniqPropName, UniqueKind.PER_TYPE_UNIQUE, lockEnabled, getPrimitiveClass(attribTypeName), cardinality, isIndexable, true, isStringField);
                     }
                 }
             } else if (isEnumType(attributeType)) {
                 if (isRelationshipType(atlasType)) {
-                    createEdgeIndex(management, propertyName, String.class, cardinality, false);
+                    createEdgeIndex(management, propertyName, String.class, cardinality, false, lockEnabled);
                 } else {
-                    createVertexIndex(management, propertyName, UniqueKind.NONE, String.class, cardinality, isIndexable, false, false);
+                    createVertexIndex(management, propertyName, UniqueKind.NONE,  lockEnabled, String.class, cardinality, isIndexable, false, false);
 
                     if (uniqPropName != null) {
-                        createVertexIndex(management, uniqPropName, UniqueKind.PER_TYPE_UNIQUE, String.class, cardinality, isIndexable, true, false);
+                        createVertexIndex(management, uniqPropName, UniqueKind.PER_TYPE_UNIQUE, lockEnabled, String.class, cardinality, isIndexable, true, false);
                     }
                 }
             } else if (isStructType(attributeType)) {
                 AtlasStructDef attribureStructDef = typeRegistry.getStructDefByName(attribTypeName);
-                updateIndexForTypeDef(management, attribureStructDef);
+                updateIndexForTypeDef(management, attribureStructDef, lockEnabled);
             }
         } catch (AtlasBaseException e) {
             LOG.error("No type exists for {}", attribTypeName, e);
@@ -727,7 +741,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         return propertyKey;
     }
 
-    public String createVertexIndex(AtlasGraphManagement management, String propertyName, UniqueKind uniqueKind, Class propertyClass,
+    public String createVertexIndex(AtlasGraphManagement management, String propertyName, UniqueKind uniqueKind, boolean lockEnabled, Class propertyClass,
                                   AtlasCardinality cardinality, boolean createCompositeIndex, boolean createCompositeIndexWithTypeAndSuperTypes, boolean isStringField) {
         String indexFieldName = null;
 
@@ -753,12 +767,12 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
             if (propertyKey != null) {
                 if (createCompositeIndex || uniqueKind == UniqueKind.GLOBAL_UNIQUE || uniqueKind == UniqueKind.PER_TYPE_UNIQUE) {
-                    createVertexCompositeIndex(management, propertyClass, propertyKey, uniqueKind == UniqueKind.GLOBAL_UNIQUE);
+                    createVertexCompositeIndex(management, propertyClass, propertyKey, uniqueKind == UniqueKind.GLOBAL_UNIQUE,  lockEnabled);
                 }
 
                 if (createCompositeIndexWithTypeAndSuperTypes) {
-                    createVertexCompositeIndexWithTypeName(management, propertyClass, propertyKey, uniqueKind == UniqueKind.PER_TYPE_UNIQUE);
-                    createVertexCompositeIndexWithSuperTypeName(management, propertyClass, propertyKey);
+                    createVertexCompositeIndexWithTypeName(management, propertyClass, propertyKey, uniqueKind == UniqueKind.PER_TYPE_UNIQUE, lockEnabled);
+                    createVertexCompositeIndexWithSuperTypeName(management, propertyClass, propertyKey, lockEnabled);
                 }
             } else {
                 LOG.warn("Index not created for {}: propertyKey is null", propertyName);
@@ -818,7 +832,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
 
     private void createEdgeIndex(AtlasGraphManagement management, String propertyName, Class propertyClass,
-                                 AtlasCardinality cardinality, boolean createCompositeIndex) {
+                                 AtlasCardinality cardinality, boolean createCompositeIndex, boolean lockEnabled) {
         if (propertyName != null) {
             AtlasPropertyKey propertyKey = management.getPropertyKey(propertyName);
 
@@ -838,7 +852,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
             if (propertyKey != null) {
                 if (createCompositeIndex) {
-                    createEdgeCompositeIndex(management, propertyClass, propertyKey);
+                    createEdgeCompositeIndex(management, propertyClass, propertyKey, lockEnabled);
                 }
             } else {
                 LOG.warn("Index not created for {}: propertyKey is null", propertyName);
@@ -870,7 +884,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
     }
     
     private void createVertexCompositeIndex(AtlasGraphManagement management, Class propertyClass, AtlasPropertyKey propertyKey,
-                                            boolean enforceUniqueness) {
+                                            boolean enforceUniqueness, boolean lockEnabled) {
         String propertyName = propertyKey.getName();
 
         if (LOG.isDebugEnabled()) {
@@ -880,13 +894,13 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         AtlasGraphIndex existingIndex = management.getGraphIndex(propertyName);
 
         if (existingIndex == null) {
-            management.createVertexCompositeIndex(propertyName, enforceUniqueness, Collections.singletonList(propertyKey));
+            management.createVertexCompositeIndex(propertyName, enforceUniqueness, lockEnabled, Collections.singletonList(propertyKey));
 
             LOG.info("Created composite index for property {} of type {}; isUnique={} ", propertyName, propertyClass.getName(), enforceUniqueness);
         }
     }
 
-    private void createEdgeCompositeIndex(AtlasGraphManagement management, Class propertyClass, AtlasPropertyKey propertyKey) {
+    private void createEdgeCompositeIndex(AtlasGraphManagement management, Class propertyClass, AtlasPropertyKey propertyKey, boolean lockEnabled) {
         String propertyName = propertyKey.getName();
 
         if (LOG.isDebugEnabled()) {
@@ -896,22 +910,22 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         AtlasGraphIndex existingIndex = management.getGraphIndex(propertyName);
 
         if (existingIndex == null) {
-            management.createEdgeCompositeIndex(propertyName, false, Collections.singletonList(propertyKey));
+            management.createEdgeCompositeIndex(propertyName, false, lockEnabled,  Collections.singletonList(propertyKey));
 
             LOG.info("Created composite index for property {} of type {}", propertyName, propertyClass.getName());
         }
     }
 
-    private void createVertexCompositeIndexWithTypeName(AtlasGraphManagement management, Class propertyClass, AtlasPropertyKey propertyKey, boolean isUnique) {
-        createVertexCompositeIndexWithSystemProperty(management, propertyClass, propertyKey, ENTITY_TYPE_PROPERTY_KEY, SINGLE, isUnique);
+    private void createVertexCompositeIndexWithTypeName(AtlasGraphManagement management, Class propertyClass, AtlasPropertyKey propertyKey, boolean isUnique, boolean lockEnabled) {
+        createVertexCompositeIndexWithSystemProperty(management, propertyClass, propertyKey, ENTITY_TYPE_PROPERTY_KEY, SINGLE, isUnique, lockEnabled);
     }
 
-    private void createVertexCompositeIndexWithSuperTypeName(AtlasGraphManagement management, Class propertyClass, AtlasPropertyKey propertyKey) {
-        createVertexCompositeIndexWithSystemProperty(management, propertyClass, propertyKey, SUPER_TYPES_PROPERTY_KEY, SET, false);
+    private void createVertexCompositeIndexWithSuperTypeName(AtlasGraphManagement management, Class propertyClass, AtlasPropertyKey propertyKey, boolean lockEnabled) {
+        createVertexCompositeIndexWithSystemProperty(management, propertyClass, propertyKey, SUPER_TYPES_PROPERTY_KEY, SET, false, lockEnabled);
     }
 
     private void createVertexCompositeIndexWithSystemProperty(AtlasGraphManagement management, Class propertyClass, AtlasPropertyKey propertyKey,
-                                                              final String systemPropertyKey, AtlasCardinality cardinality, boolean isUnique) {
+                                                              final String systemPropertyKey, AtlasCardinality cardinality, boolean isUnique, boolean lockEnabled) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Creating composite index for property {} of type {} and {}", propertyKey.getName(), propertyClass.getName(),  systemPropertyKey);
         }
@@ -928,7 +942,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
             List<AtlasPropertyKey> keys = new ArrayList<>(2);
             keys.add(typePropertyKey);
             keys.add(propertyKey);
-            management.createVertexCompositeIndex(indexName, isUnique, keys);
+            management.createVertexCompositeIndex(indexName, isUnique, lockEnabled, keys);
 
             LOG.info("Created composite index for property {} of type {} and {}", propertyKey.getName(), propertyClass.getName(), systemPropertyKey);
         }
@@ -973,12 +987,12 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         }
     }
 
-    private void updateIndexForTypeDef(AtlasGraphManagement management, AtlasBaseTypeDef typeDef) {
+    private void updateIndexForTypeDef(AtlasGraphManagement management, AtlasBaseTypeDef typeDef, boolean lockEnabled) {
         Preconditions.checkNotNull(typeDef, "Cannot index on null typedefs");
         if (LOG.isDebugEnabled()) {
             LOG.debug("Creating indexes for type name={}, definition={}", typeDef.getName(), typeDef.getClass());
         }
-        addIndexForType(management, typeDef);
+        addIndexForType(management, typeDef, lockEnabled);
         LOG.info("Index creation for type {} complete", typeDef.getName());
     }
 

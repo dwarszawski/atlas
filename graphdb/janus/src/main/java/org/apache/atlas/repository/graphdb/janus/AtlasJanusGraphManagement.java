@@ -244,7 +244,7 @@ public class AtlasJanusGraphManagement implements AtlasGraphManagement {
     }
 
     @Override
-    public void createVertexCompositeIndex(String propertyName, boolean isUnique, List<AtlasPropertyKey> propertyKeys) {
+    public void createVertexCompositeIndex(String propertyName, boolean isUnique, boolean lockEnabled, List<AtlasPropertyKey> propertyKeys) {
         IndexBuilder indexBuilder = management.buildIndex(propertyName, Vertex.class);
 
         for (AtlasPropertyKey key : propertyKeys) {
@@ -256,11 +256,14 @@ public class AtlasJanusGraphManagement implements AtlasGraphManagement {
             indexBuilder.unique();
         }
 
-        indexBuilder.buildCompositeIndex();
+        JanusGraphIndex index = indexBuilder.buildCompositeIndex();
+        if (lockEnabled) {
+            management.setConsistency(index, ConsistencyModifier.LOCK);
+        }
     }
 
     @Override
-    public void createEdgeCompositeIndex(String propertyName, boolean isUnique, List<AtlasPropertyKey> propertyKeys) {
+    public void createEdgeCompositeIndex(String propertyName, boolean isUnique, boolean lockEnabled, List<AtlasPropertyKey> propertyKeys) {
         IndexBuilder indexBuilder = management.buildIndex(propertyName, Edge.class);
 
         for (AtlasPropertyKey key : propertyKeys) {
@@ -272,6 +275,10 @@ public class AtlasJanusGraphManagement implements AtlasGraphManagement {
             indexBuilder.unique();
         }
 
-        indexBuilder.buildCompositeIndex();
+        JanusGraphIndex index = indexBuilder.buildCompositeIndex();
+
+        if (lockEnabled) {
+            management.setConsistency(index, ConsistencyModifier.LOCK);
+        }
     }
 }

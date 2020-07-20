@@ -41,10 +41,12 @@ public abstract class ConcurrentPatchProcessor {
 
     private static final String NUM_WORKERS_PROPERTY = "atlas.patch.numWorkers";
     private static final String BATCH_SIZE_PROPERTY  = "atlas.patch.batchSize";
+    private static final String LOCK_ENABLED_PROPERTY  = "atlas.graph.storage.lock.enabled";
     private static final String ATLAS_SOLR_SHARDS    = "ATLAS_SOLR_SHARDS";
     private static final String WORKER_NAME_PREFIX   = "patchWorkItem";
     private static final int    NUM_WORKERS;
     private static final int    BATCH_SIZE;
+    protected static final boolean LOCK_ENABLED;
 
     private final EntityGraphMapper        entityGraphMapper;
     private final AtlasGraph               graph;
@@ -54,12 +56,14 @@ public abstract class ConcurrentPatchProcessor {
     static {
         int numWorkers = 3;
         int batchSize  = 300;
+        boolean lockEnabled = false;
 
         try {
             Configuration config = ApplicationProperties.get();
 
-            numWorkers = config.getInt(NUM_WORKERS_PROPERTY, config.getInt(ATLAS_SOLR_SHARDS, 1) * 3);
-            batchSize  = config.getInt(BATCH_SIZE_PROPERTY, 300);
+            numWorkers    = config.getInt(NUM_WORKERS_PROPERTY, config.getInt(ATLAS_SOLR_SHARDS, 1) * 3);
+            batchSize     = config.getInt(BATCH_SIZE_PROPERTY, 300);
+            lockEnabled = config.getBoolean(LOCK_ENABLED_PROPERTY, false);
 
             LOG.info("UniqueAttributePatch: {}={}, {}={}", NUM_WORKERS_PROPERTY, numWorkers, BATCH_SIZE_PROPERTY, batchSize);
         } catch (Exception e) {
@@ -68,6 +72,7 @@ public abstract class ConcurrentPatchProcessor {
 
         NUM_WORKERS = numWorkers;
         BATCH_SIZE  = batchSize;
+        LOCK_ENABLED = lockEnabled;
     }
 
     public ConcurrentPatchProcessor(PatchContext context) {

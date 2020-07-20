@@ -56,14 +56,14 @@ public abstract class AbstractGraphDatabaseTest {
         }
         mgmt.makePropertyKey("age13", Integer.class, AtlasCardinality.SINGLE);
 
-        createIndices(mgmt, "name", String.class, false, AtlasCardinality.SINGLE);
-        createIndices(mgmt, WEIGHT_PROPERTY, Integer.class, false, AtlasCardinality.SINGLE);
-        createIndices(mgmt, "size15", String.class, false, AtlasCardinality.SINGLE);
-        createIndices(mgmt, "typeName", String.class, false, AtlasCardinality.SINGLE);
-        createIndices(mgmt, "__type", String.class, false, AtlasCardinality.SINGLE);
-        createIndices(mgmt, Constants.GUID_PROPERTY_KEY, String.class, true, AtlasCardinality.SINGLE);
-        createIndices(mgmt, Constants.TRAIT_NAMES_PROPERTY_KEY, String.class, false, AtlasCardinality.SET);
-        createIndices(mgmt, Constants.SUPER_TYPES_PROPERTY_KEY, String.class, false, AtlasCardinality.SET);
+        createIndices(mgmt, "name", String.class, false, false, AtlasCardinality.SINGLE);
+        createIndices(mgmt, WEIGHT_PROPERTY, Integer.class, false, false, AtlasCardinality.SINGLE);
+        createIndices(mgmt, "size15", String.class, false, false, AtlasCardinality.SINGLE);
+        createIndices(mgmt, "typeName", String.class, false, false, AtlasCardinality.SINGLE);
+        createIndices(mgmt, "__type", String.class, false, false, AtlasCardinality.SINGLE);
+        createIndices(mgmt, Constants.GUID_PROPERTY_KEY, String.class, true, false, AtlasCardinality.SINGLE);
+        createIndices(mgmt, Constants.TRAIT_NAMES_PROPERTY_KEY, String.class, false, false, AtlasCardinality.SET);
+        createIndices(mgmt, Constants.SUPER_TYPES_PROPERTY_KEY, String.class, false, false, AtlasCardinality.SET);
         mgmt.commit();
     }
 
@@ -85,7 +85,7 @@ public abstract class AbstractGraphDatabaseTest {
     }
 
     private static void createIndices(AtlasGraphManagement management, String propertyName, Class propertyClass,
-            boolean isUnique, AtlasCardinality cardinality) {
+            boolean isUnique, boolean lockEnabled, AtlasCardinality cardinality) {
 
         if (management.containsPropertyKey(propertyName)) {
             //index was already created
@@ -102,7 +102,7 @@ public abstract class AbstractGraphDatabaseTest {
             t.printStackTrace();
         }
         try {
-            management.createVertexCompositeIndex(propertyName, isUnique, Collections.singletonList(key));
+            management.createVertexCompositeIndex(propertyName, isUnique, lockEnabled, Collections.singletonList(key));
 
         } catch(Throwable t) {
             //ok

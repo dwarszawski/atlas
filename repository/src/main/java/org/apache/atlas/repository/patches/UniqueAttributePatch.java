@@ -144,6 +144,7 @@ public class UniqueAttributePatch extends AtlasPatchHandler {
                     getIndexer().createVertexIndex(management,
                                                    uniquePropertyName,
                                                    UniqueKind.PER_TYPE_UNIQUE,
+                                                   LOCK_ENABLED,
                                                    propertyClass,
                                                    cardinality,
                                                    isIndexable,
